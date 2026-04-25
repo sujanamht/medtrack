@@ -176,6 +176,158 @@ export default function Contact() {
         ))}
       </div>
 
+    {/* 3. APPOINTMENT FORM CARD */}
+      <div ref={formRef} className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center mb-1">
+          <i className="fa-solid fa-calendar-plus text-blue-600 mr-2" />
+          <h2 className="font-semibold text-gray-800 text-lg">Request Appointment</h2>
+        </div>
+
+        {/* SUCCESS STATE */}
+        {submitted ? (
+          <div className="flex flex-col items-center py-12 text-center">
+            <i className="fa-solid fa-circle-check text-green-500 text-6xl" />
+            <p className="text-2xl font-bold text-gray-800 mt-4">Request Sent!</p>
+            <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
+              {selectedDoctor?.name ?? 'Your doctor'} will contact you at{' '}
+              {formData.phone} to confirm your appointment.
+            </p>
+            <button
+              onClick={() => navigate('/')}
+              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        ) : (
+
+          /* FORM STATE */
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+
+            {/* Row 1 — Patient Name + Phone */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Patient Name</label>
+                <input
+                  type="text"
+                  value={formData.patientName}
+                  onChange={e => updateField('patientName', e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+                {errors.patientName && (
+                  <p className="text-red-500 text-xs mt-1">{errors.patientName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Phone</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={e => updateField('phone', e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+                {errors.phone && (
+                  <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2 — Select Doctor + Reason */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Select Doctor</label>
+                <select
+                  value={formData.doctorId}
+                  onChange={e => updateField('doctorId', e.target.value)}
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Choose a doctor...</option>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} — {d.specialty}
+                    </option>
+                  ))}
+                </select>
+                {errors.doctorId && (
+                  <p className="text-red-500 text-xs mt-1">{errors.doctorId}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Reason for Contact</label>
+                <select
+                  value={formData.reason}
+                  onChange={e => updateField('reason', e.target.value)}
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select a reason...</option>
+                  {reasons.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {errors.reason && (
+                  <p className="text-red-500 text-xs mt-1">{errors.reason}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Row 3 — Preferred Date + Time */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Preferred Date</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={formData.preferredDate}
+                  onChange={e => updateField('preferredDate', e.target.value)}
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Preferred Time</label>
+                <select
+                  value={formData.preferredTime}
+                  onChange={e => updateField('preferredTime', e.target.value)}
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">Select time slot...</option>
+                  <option value="morning">Morning (9AM - 12PM)</option>
+                  <option value="afternoon">Afternoon (12PM - 5PM)</option>
+                  <option value="evening">Evening (5PM - 8PM)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Row 4 — Message */}
+            <div>
+              <label className="text-sm font-medium text-gray-700">Message or Symptoms</label>
+              <textarea
+                rows={4}
+                value={formData.message}
+                onChange={e => updateField('message', e.target.value)}
+                placeholder="Describe your symptoms, reason for visit, or any questions for the doctor..."
+                className="w-full mt-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-3 font-medium transition-colors mt-2"
+            >
+              <i className="fa-solid fa-paper-plane mr-2" />
+              Send Appointment Request
+            </button>
+
+          </form>
+        )}
+      </div>
+
+
     </div>
   )
 }
