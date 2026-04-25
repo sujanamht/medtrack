@@ -138,6 +138,173 @@ export default function Dashboard() {
 
       </div>
 
+      {/* 3. TWO-COLUMN LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* LEFT — Today's Schedule */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-gray-800">Today's Schedule</h3>
+            <span className="text-xs text-gray-400">Saturday, April 25, 2025</span>
+          </div>
+
+          <div className="space-y-0">
+            {meds.map((med, idx) => (
+              <div key={med.id}>
+                <div className="flex items-center gap-4 py-3">
+                  {/* Time badge */}
+                  <div className="w-16 shrink-0 text-center text-xs font-medium bg-blue-50 text-blue-600 rounded-lg py-1">
+                    {med.time}
+                  </div>
+
+                  {/* Med info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm">{med.name}</p>
+                    <p className="text-xs text-gray-500">{med.dosage} · {med.frequency}</p>
+                  </div>
+
+                  {/* Status */}
+                  <div className="shrink-0 flex flex-col items-center gap-0.5">
+                    {med.status === 'taken' && (
+                      <>
+                        <i className="fa-solid fa-circle-check text-green-500 text-xl" />
+                        <span className="text-xs text-green-600">Taken</span>
+                      </>
+                    )}
+                    {med.status === 'skipped' && (
+                      <>
+                        <i className="fa-solid fa-forward text-gray-400 text-xl" />
+                        <span className="text-xs text-gray-400">Skipped</span>
+                      </>
+                    )}
+                    {med.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => markStatus(med.id, 'taken')}
+                          className="bg-blue-600 text-white text-xs px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Take
+                        </button>
+                        <button
+                          onClick={() => markStatus(med.id, 'skipped')}
+                          className="border border-gray-300 text-gray-500 text-xs px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Skip
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {idx < meds.length - 1 && (
+                  <div className="border-t border-gray-100" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Adherence bar */}
+          <div className="mt-5 pt-4 border-t border-gray-100">
+            <div className="flex justify-between text-xs font-medium text-gray-600 mb-2">
+              <span>Today's adherence</span>
+              <span>{adherencePct}%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-500 ${adherenceBarClass(adherencePct)}`}
+                style={{ width: `${adherencePct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="flex flex-col gap-4">
+
+          {/* CARD A — Alerts & Notifications */}
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="fa-solid fa-bell text-gray-700" />
+              <h3 className="font-bold text-gray-800 flex-1">Alerts</h3>
+              {unreadCount > 0 && (
+                <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {notifications.map(n => (
+                <div key={n.id} className="flex items-start gap-3">
+                  {/* Icon */}
+                  <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center
+                    ${n.type === 'refill'   ? 'bg-red-50'   : ''}
+                    ${n.type === 'reminder' ? 'bg-blue-50'  : ''}
+                    ${n.type === 'diet'     ? 'bg-green-50' : ''}
+                  `}>
+                    {n.type === 'refill'   && <i className="fa-solid fa-arrows-rotate text-red-500 text-sm" />}
+                    {n.type === 'reminder' && <i className="fa-solid fa-clock text-blue-500 text-sm" />}
+                    {n.type === 'diet'     && <i className="fa-solid fa-bowl-food text-green-500 text-sm" />}
+                  </div>
+
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 leading-snug">{n.message}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{n.time}</p>
+                  </div>
+
+                  {/* Unread dot */}
+                  {!n.read && (
+                    <div className="shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 text-right">
+              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                View all
+              </button>
+            </div>
+          </div>
+
+          {/* CARD B — Supply Status */}
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="fa-solid fa-warehouse text-gray-700" />
+              <h3 className="font-bold text-gray-800">Supply Status</h3>
+            </div>
+
+            <div className="space-y-3">
+              {supplyStatus.map(item => (
+                <div key={item.name}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${supplyBadgeClass(item.status)}`}>
+                      {item.daysLeft} days left
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full ${supplyBarClass(item.status)}`}
+                      style={{ width: `${(item.pillsRemaining / item.totalPills) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => navigate('/medications')}
+              className="mt-5 w-full border border-blue-600 text-blue-600 rounded-lg py-2 text-sm font-medium hover:bg-blue-50 transition-colors"
+            >
+              Manage Medications
+            </button>
+          </div>
+
+        </div>
+      </div>
+
     
 
     </div>
