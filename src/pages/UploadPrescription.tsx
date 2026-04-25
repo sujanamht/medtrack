@@ -30,6 +30,69 @@ export default function UploadPrescription() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Gemini state ──────────────────────────────────────────────────────────
+  const [geminiLoading, setGeminiLoading] = useState(false)
+  const [geminiError, setGeminiError] = useState('')
+  const [geminiDone, setGeminiDone] = useState(false)
+
+  // ── Gemini extraction ─────────────────────────────────────────────────────
+  async function handleGeminiExtract(fileOverride?: File) {
+    const file = fileOverride ?? selectedFile
+    if (!file) return
+    setGeminiLoading(true)
+    setGeminiError('')
+    setGeminiDone(false)
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: file.type, data: base64 } },
+                { text: `Parse this prescription and return ONLY valid JSON, no markdown, no explanation:
+{
+  "patientName": "string or empty",
+  "doctorName": "string or empty",
+  "dateIssued": "YYYY-MM-DD or empty",
+  "medications": [{ "name": "string", "dosage": "string or empty", "frequency": "string or empty", "durationDays": "string or empty", "notes": "string or empty" }]
+}` }
+              ]
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+          })
+        }
+      )
+
+      if (!response.ok) throw new Error(`Gemini error ${response.status}`)
+      const data = await response.json()
+      const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+      const parsed = JSON.parse(text.replace(/```json|```/gi, '').trim())
+
+      if (parsed.patientName) setPatientName(parsed.patientName)
+      if (parsed.doctorName) setDoctorName(parsed.doctorName)
+      if (parsed.dateIssued) setDateIssued(parsed.dateIssued)
+      if (parsed.medications?.length) {
+        setMedications(parsed.medications.map((m: Omit<Medication, 'id'>, i: number) => ({ ...m, id: String(Date.now() + i) })))
+      }
+      setGeminiDone(true)
+    } catch (err) {
+      setGeminiError(err instanceof Error ? err.message : 'Extraction failed — please fill in manually.')
+    } finally {
+      setGeminiLoading(false)
+    }
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   function handleFile(file: File) {
@@ -45,6 +108,7 @@ export default function UploadPrescription() {
     }
     setErrors({})
     setStage('preview')
+    handleGeminiExtract(file)
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -93,6 +157,9 @@ export default function UploadPrescription() {
     setDateIssued('')
     setErrors({})
     setMedications([{ id: '1', name: '', dosage: '', frequency: '', durationDays: '', notes: '' }])
+    setGeminiLoading(false)
+    setGeminiError('')
+    setGeminiDone(false)
   }
 
   // ── Input class helper ────────────────────────────────────────────────────
@@ -302,173 +369,125 @@ export default function UploadPrescription() {
             placeholder={`Paste raw prescription text here if you have it, e.g.:\nPatient: John Mathews\nRx: Metformin 500mg twice daily × 30 days\nDr. Sarah Johnson | April 25, 2025`}
             className="w-full mt-3 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none transition-all"
           />
-          <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3 flex gap-2 items-center">
-            <i className="fa-solid fa-wand-magic-sparkles text-purple-500" />
-            <span className="text-xs text-purple-700">
-              Gemini AI auto-extraction coming soon — fill in details below for now.
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Prescription details */}
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="font-semibold text-gray-800">
-            <i className="fa-solid fa-user-doctor text-blue-600 mr-2" />
-            Prescription Details
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {/* Patient Name */}
-            <div>
-              <label className="text-sm font-medium text-gray-700">
-                Patient Name
-                <span className="text-red-500 ml-0.5">*</span>
-              </label>
-              <input
-                className={inputCls}
-                value={patientName}
-                onChange={(e) => setPatientName(e.target.value)}
-                placeholder="e.g. John Mathews"
-              />
-              {errors.patientName && (
-                <p className="text-red-500 text-xs mt-1">{errors.patientName}</p>
+          {selectedFile && (
+            <div className="mt-3">
+              {geminiLoading && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center gap-2">
+                  <i className="fa-solid fa-spinner animate-spin text-purple-500" />
+                  <span className="text-xs text-purple-700 font-medium">Extracting with Gemini...</span>
+                </div>
+              )}
+              {geminiDone && !geminiLoading && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                  <i className="fa-solid fa-circle-check text-green-500" />
+                  <span className="text-xs text-green-700 font-medium">Fields filled by Gemini — review and edit below</span>
+                  <button onClick={() => handleGeminiExtract()} className="ml-auto text-xs text-green-600 underline hover:no-underline">Re-extract</button>
+                </div>
+              )}
+              {geminiError && (
+                <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+                  <i className="fa-solid fa-circle-exclamation text-red-500" />
+                  <span className="text-xs text-red-600">{geminiError}</span>
+                </div>
               )}
             </div>
-
-            {/* Doctor Name */}
-            <div>
-              <label className="text-sm font-medium text-gray-700">Doctor Name</label>
-              <input
-                className={inputCls}
-                value={doctorName}
-                onChange={(e) => setDoctorName(e.target.value)}
-                placeholder="e.g. Dr. Sarah Johnson"
-              />
+          )}
+          {!selectedFile && (
+            <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3 flex gap-2 items-center">
+              <i className="fa-solid fa-wand-magic-sparkles text-purple-500" />
+              <span className="text-xs text-purple-700">Upload a file above to enable Gemini AI auto-extraction</span>
             </div>
-
-            {/* Date Issued */}
-            <div>
-              <label className="text-sm font-medium text-gray-700">Date Issued</label>
-              <input
-                type="date"
-                className={inputCls}
-                value={dateIssued}
-                onChange={(e) => setDateIssued(e.target.value)}
-              />
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Card 4: Medications */}
+        {/* Card 3: Extraction results */}
         <div className="bg-white rounded-xl shadow-sm p-5">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-gray-800">
-              <i className="fa-solid fa-pills text-blue-600 mr-2" />
-              Medications
-              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full ml-2">
-                {medications.length} added
-              </span>
-            </p>
-            <button
-              className="border border-blue-200 text-blue-600 text-sm rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors"
-              onClick={addMedication}
-            >
-              + Add Medication
-            </button>
-          </div>
+          <p className="font-semibold text-gray-800 mb-4">
+            <i className="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2" />
+            Extracted Information
+          </p>
 
-          {errors.medName && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3 flex gap-2 items-center">
-              <i className="fa-solid fa-circle-exclamation text-red-500" />
-              <span className="text-red-600 text-sm">{errors.medName}</span>
+          {geminiLoading && (
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-gray-400">
+              <i className="fa-solid fa-spinner animate-spin text-3xl text-purple-400" />
+              <span className="text-sm font-medium">Analyzing prescription...</span>
             </div>
           )}
 
-          <div className="space-y-3 mt-4">
-            {medications.map((med, index) => (
-              <div key={med.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4 relative">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                  Medication #{index + 1}
-                </p>
+          {geminiError && !geminiLoading && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+              <i className="fa-solid fa-circle-exclamation text-red-500" />
+              <span className="text-xs text-red-600">{geminiError}</span>
+            </div>
+          )}
 
-                {medications.length > 1 && (
-                  <button
-                    className="absolute top-3 right-3 text-gray-300 hover:text-red-500 text-lg leading-none"
-                    onClick={() => removeMedication(med.id)}
-                  >
-                    <i className="fa-solid fa-xmark" />
-                  </button>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                  {/* Medicine Name */}
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-gray-700">Medicine Name *</label>
-                    <input
-                      className={inputCls}
-                      placeholder="e.g. Metformin"
-                      value={med.name}
-                      onChange={(e) => updateMedication(med.id, 'name', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Dosage */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Dosage</label>
-                    <input
-                      className={inputCls}
-                      placeholder="e.g. 500mg"
-                      value={med.dosage}
-                      onChange={(e) => updateMedication(med.id, 'dosage', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Frequency */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Frequency</label>
-                    <input
-                      className={inputCls}
-                      placeholder="e.g. Twice daily"
-                      value={med.frequency}
-                      onChange={(e) => updateMedication(med.id, 'frequency', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Duration */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Duration (days)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className={inputCls}
-                      placeholder="e.g. 30"
-                      value={med.durationDays}
-                      onChange={(e) => updateMedication(med.id, 'durationDays', e.target.value)}
-                    />
-                  </div>
-
-                  {/* Notes */}
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-gray-700">Special Instructions</label>
-                    <input
-                      className={inputCls}
-                      placeholder="e.g. Take with food, avoid alcohol"
-                      value={med.notes}
-                      onChange={(e) => updateMedication(med.id, 'notes', e.target.value)}
-                    />
-                  </div>
+          {!geminiLoading && !geminiError && (
+            <>
+              {/* Patient / Doctor / Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">Patient</p>
+                  <p className="text-sm font-medium text-gray-800">{patientName || <span className="text-gray-400 italic">Not detected</span>}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">Doctor</p>
+                  <p className="text-sm font-medium text-gray-800">{doctorName || <span className="text-gray-400 italic">Not detected</span>}</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">Date Issued</p>
+                  <p className="text-sm font-medium text-gray-800">{dateIssued || <span className="text-gray-400 italic">Not detected</span>}</p>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Medications */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <i className="fa-solid fa-pills text-blue-400 mr-1.5" />
+                Medications
+                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full ml-2 normal-case tracking-normal">
+                  {medications.filter(m => m.name.trim()).length} found
+                </span>
+              </p>
+              <div className="space-y-2">
+                {medications.filter(m => m.name.trim()).map((med) => {
+                  const parts = [med.dosage, med.frequency, med.durationDays ? `${med.durationDays} days` : ''].filter(Boolean)
+                  return (
+                    <div key={med.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex gap-3">
+                      <i className="fa-solid fa-capsules text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{med.name}</p>
+                        {parts.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-0.5">{parts.join(' · ')}</p>
+                        )}
+                        {med.notes && (
+                          <p className="text-xs text-gray-400 mt-0.5 italic">{med.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+                {medications.filter(m => m.name.trim()).length === 0 && (
+                  <p className="text-sm text-gray-400 italic">No medications detected</p>
+                )}
+              </div>
+
+              {errors.patientName && (
+                <p className="text-red-500 text-xs mt-4">{errors.patientName}</p>
+              )}
+              {errors.medName && (
+                <p className="text-red-500 text-xs mt-1">{errors.medName}</p>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Save button */}
+        {/* Confirm & Save button */}
         <button
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3.5 font-medium transition-colors text-sm"
+          disabled={geminiLoading}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-medium transition-colors text-sm"
           onClick={handleSave}
         >
-          <i className="fa-solid fa-floppy-disk mr-2" />
-          Save Prescription
+          <i className="fa-solid fa-circle-check mr-2" />
+          Confirm &amp; Save
         </button>
       </div>
     )
