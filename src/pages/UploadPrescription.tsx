@@ -35,7 +35,7 @@ export default function UploadPrescription() {
   const [geminiError, setGeminiError] = useState('')
   const [geminiDone, setGeminiDone] = useState(false)
 
-  // ── Gemini extraction ─────────────────────────────────────────────────────
+  // ── Extraction via Flask backend ──────────────────────────────────────────
   async function handleGeminiExtract(fileOverride?: File) {
     const file = fileOverride ?? selectedFile
     if (!file) return
@@ -44,46 +44,20 @@ export default function UploadPrescription() {
     setGeminiDone(false)
 
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('http://localhost:5000/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error ?? `Server error ${res.status}`)
+      }
+      const data = await res.json()
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { inline_data: { mime_type: file.type, data: base64 } },
-                { text: `Parse this prescription and return ONLY valid JSON, no markdown, no explanation:
-{
-  "patientName": "string or empty",
-  "doctorName": "string or empty",
-  "dateIssued": "YYYY-MM-DD or empty",
-  "medications": [{ "name": "string", "dosage": "string or empty", "frequency": "string or empty", "durationDays": "string or empty", "notes": "string or empty" }]
-}` }
-              ]
-            }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
-          })
-        }
-      )
-
-      if (!response.ok) throw new Error(`Gemini error ${response.status}`)
-      const data = await response.json()
-      const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-      const parsed = JSON.parse(text.replace(/```json|```/gi, '').trim())
-
-      if (parsed.patientName) setPatientName(parsed.patientName)
-      if (parsed.doctorName) setDoctorName(parsed.doctorName)
-      if (parsed.dateIssued) setDateIssued(parsed.dateIssued)
-      if (parsed.medications?.length) {
-        setMedications(parsed.medications.map((m: Omit<Medication, 'id'>, i: number) => ({ ...m, id: String(Date.now() + i) })))
+      if (data.patientName) setPatientName(data.patientName)
+      if (data.doctorName) setDoctorName(data.doctorName)
+      if (data.dateIssued) setDateIssued(data.dateIssued)
+      if (data.medications?.length) {
+        setMedications(data.medications.map((m: Omit<Medication, 'id'>, i: number) => ({ ...m, id: String(Date.now() + i) })))
       }
       setGeminiDone(true)
     } catch (err) {

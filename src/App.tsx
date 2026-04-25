@@ -4,7 +4,6 @@ import Dashboard from '@/pages/Dashboard'
 import UploadPrescription from '@/pages/UploadPrescription'
 import Medications from '@/pages/Medications'
 import Diet from '@/pages/Diet'
-// import Contact from '@/pages/Contact'
 
 const navItems = [
   { to: '/', icon: 'fa-solid fa-house', label: 'Dashboard' },
@@ -144,9 +143,8 @@ function Layout() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/upload" element={<UploadPrescription />} />
-            {/* <Route path="/medications" element={<Medications />} />
+            <Route path="/medications" element={<Medications />} />
             <Route path="/diet" element={<Diet />} />
-            <Route path="/contact" element={<Contact />} /> */}
           </Routes>
         </main>
       </div>
