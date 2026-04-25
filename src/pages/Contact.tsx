@@ -139,10 +139,7 @@ export default function Contact() {
                 <i className="fa-solid fa-phone w-4 text-gray-400 mr-2" />
                 {doctor.phone}
               </p>
-              <p>
-                <i className="fa-solid fa-envelope w-4 text-gray-400 mr-2" />
-                {doctor.email}
-              </p>
+            
               <p>
                 <i className="fa-solid fa-clock w-4 text-gray-400 mr-2" />
                 Next available: {doctor.nextSlot}
