@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 type Status = 'critical' | 'low' | 'good'
@@ -16,6 +16,7 @@ interface Medication {
   notes: string
   status: Status
   daysLeft: number
+  prescriptionId: string
 }
 
 interface PrescriptionMed {
@@ -73,6 +74,7 @@ function prescriptionsToMeds(prescriptions: Prescription[]): Medication[] {
         pillsRemaining,
         daysLeft,
         status: computeStatus(daysLeft, total),
+        prescriptionId: rx._meta.filename.replace(/\.[^.]+$/, ''),
       })
     })
   })
@@ -114,6 +116,11 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+interface NotifModal {
+  prescriptionId: string
+  medName: string
+}
+
 export default function Medications() {
   const navigate = useNavigate()
   const [meds, setMeds] = useState<Medication[]>([])
@@ -121,20 +128,71 @@ export default function Medications() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetch('http://localhost:5001/api/prescriptions')
-      .then((r) => {
+  // notification state
+  const [activeNotifIds, setActiveNotifIds] = useState<Set<string>>(new Set())
+  const [notifModal, setNotifModal] = useState<NotifModal | null>(null)
+  const [notifEmail, setNotifEmail] = useState(() => localStorage.getItem('medtrack_notif_email') ?? '')
+  const [notifStartDate, setNotifStartDate] = useState(new Date().toISOString().split('T')[0])
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifSuccess, setNotifSuccess] = useState(false)
+  const [notifError, setNotifError] = useState('')
+
+  const loadData = useCallback(() => {
+    Promise.all([
+      fetch('http://localhost:5001/api/prescriptions').then((r) => {
         if (!r.ok) throw new Error(`Server error ${r.status}`)
-        return r.json()
+        return r.json() as Promise<Prescription[]>
+      }),
+      fetch('http://localhost:5001/api/notifications').then((r) =>
+        r.ok ? r.json() : { activeIds: [] }
+      ),
+    ])
+      .then(([prescriptions, notifData]) => {
+        setMeds(prescriptionsToMeds(prescriptions))
+        setActiveNotifIds(new Set((notifData as { activeIds: string[] }).activeIds))
       })
-      .then((data: Prescription[]) => {
-        setMeds(prescriptionsToMeds(data))
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load medications')
-      })
+      .catch((err: Error) => setError(err.message || 'Failed to load medications'))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  async function handleSetupNotifications() {
+    if (!notifEmail || !notifModal) return
+    setNotifLoading(true)
+    setNotifError('')
+    try {
+      const res = await fetch('http://localhost:5001/api/notifications/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prescriptionId: notifModal.prescriptionId,
+          userEmail: notifEmail,
+          startDate: notifStartDate,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? `Server error ${res.status}`)
+      }
+      localStorage.setItem('medtrack_notif_email', notifEmail)
+      setNotifSuccess(true)
+      setActiveNotifIds((prev) => new Set([...prev, notifModal.prescriptionId]))
+    } catch (err) {
+      setNotifError(err instanceof Error ? err.message : 'Failed to set up notifications')
+    } finally {
+      setNotifLoading(false)
+    }
+  }
+
+  function closeModal() {
+    setNotifModal(null)
+    setNotifEmail(localStorage.getItem('medtrack_notif_email') ?? '')
+    setNotifStartDate(new Date().toISOString().split('T')[0])
+    setNotifLoading(false)
+    setNotifSuccess(false)
+    setNotifError('')
+  }
 
   const filtered = filter === 'all' ? meds : meds.filter((m) => m.status === filter)
 
@@ -150,6 +208,8 @@ export default function Medications() {
       setMeds((prev) => prev.filter((m) => m.id !== id))
     }
   }
+
+  const inputCls = 'w-full mt-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all'
 
   return (
     <div className="space-y-6">
@@ -330,6 +390,23 @@ export default function Medications() {
                     Request Refill
                   </button>
                   <div className="flex gap-2">
+                    {/* Notification bell */}
+                    {activeNotifIds.has(med.prescriptionId) ? (
+                      <span
+                        title="Email reminders active"
+                        className="p-1.5 text-green-500"
+                      >
+                        <i className="fa-solid fa-bell" />
+                      </span>
+                    ) : (
+                      <button
+                        title="Set up email reminders"
+                        className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors"
+                        onClick={() => setNotifModal({ prescriptionId: med.prescriptionId, medName: med.name })}
+                      >
+                        <i className="fa-regular fa-bell" />
+                      </button>
+                    )}
                     <button
                       className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                       onClick={() => removeMed(med.id)}
@@ -341,6 +418,90 @@ export default function Medications() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Notification setup modal */}
+      {notifModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                <i className="fa-solid fa-bell text-blue-600" />
+                Set Up Email Reminders
+              </h3>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                <i className="fa-solid fa-xmark text-xl" />
+              </button>
+            </div>
+
+            {notifSuccess ? (
+              <div className="text-center py-4">
+                <i className="fa-solid fa-circle-check text-green-500 text-4xl mb-3" />
+                <p className="font-semibold text-gray-800">Reminders Activated!</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  You'll receive dose reminders and low-supply alerts at {notifEmail}.
+                </p>
+                <button
+                  onClick={closeModal}
+                  className="mt-5 bg-blue-600 text-white rounded-xl px-6 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  Get emailed when it's time to take <strong>{notifModal.medName}</strong> and alerted 3 days before you run out — with an option to book an appointment or call your doctor.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium block mb-1">Your email address</label>
+                    <input
+                      type="email"
+                      value={notifEmail}
+                      onChange={(e) => setNotifEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium block mb-1">Medication start date</label>
+                    <input
+                      type="date"
+                      value={notifStartDate}
+                      onChange={(e) => setNotifStartDate(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                  {notifError && (
+                    <p className="text-red-500 text-xs flex items-center gap-1.5">
+                      <i className="fa-solid fa-circle-exclamation" />
+                      {notifError}
+                    </p>
+                  )}
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      onClick={closeModal}
+                      className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={notifLoading || !notifEmail.includes('@')}
+                      onClick={handleSetupNotifications}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-2.5 text-sm font-medium transition-colors"
+                    >
+                      {notifLoading
+                        ? <><i className="fa-solid fa-spinner animate-spin mr-2" />Activating...</>
+                        : <><i className="fa-solid fa-bell mr-2" />Activate</>
+                      }
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

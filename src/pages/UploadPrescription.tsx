@@ -34,6 +34,16 @@ export default function UploadPrescription() {
   const [geminiLoading, setGeminiLoading] = useState(false)
   const [geminiError, setGeminiError] = useState('')
   const [geminiDone, setGeminiDone] = useState(false)
+  const [prescriptionId, setPrescriptionId] = useState('')
+
+  // ── Notification setup state ──────────────────────────────────────────────
+  const [notifChoice, setNotifChoice] = useState<'pending' | 'opted-in' | 'opted-out'>('pending')
+  const [notifEmail, setNotifEmail] = useState(() => localStorage.getItem('medtrack_notif_email') ?? '')
+  const [notifStartDate, setNotifStartDate] = useState(new Date().toISOString().split('T')[0])
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifSuccess, setNotifSuccess] = useState(false)
+  const [notifError, setNotifError] = useState('')
+  const [scheduledTimes, setScheduledTimes] = useState<string[]>([])
 
   // ── Extraction via Flask backend ──────────────────────────────────────────
   async function handleGeminiExtract(fileOverride?: File) {
@@ -58,6 +68,9 @@ export default function UploadPrescription() {
       if (data.dateIssued) setDateIssued(data.dateIssued)
       if (data.medications?.length) {
         setMedications(data.medications.map((m: Omit<Medication, 'id'>, i: number) => ({ ...m, id: String(Date.now() + i) })))
+      }
+      if (data._meta?.filename) {
+        setPrescriptionId(data._meta.filename.replace(/\.[^.]+$/, ''))
       }
       setGeminiDone(true)
     } catch (err) {
@@ -120,6 +133,31 @@ export default function UploadPrescription() {
     setStage('saved')
   }
 
+  async function handleSetupNotifications() {
+    if (!notifEmail || !prescriptionId) return
+    setNotifLoading(true)
+    setNotifError('')
+    try {
+      const res = await fetch('http://localhost:5001/api/notifications/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prescriptionId, userEmail: notifEmail, startDate: notifStartDate }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? `Server error ${res.status}`)
+      }
+      const data = await res.json()
+      localStorage.setItem('medtrack_notif_email', notifEmail)
+      setScheduledTimes(data.scheduledTimes ?? [])
+      setNotifSuccess(true)
+    } catch (err) {
+      setNotifError(err instanceof Error ? err.message : 'Failed to set up notifications')
+    } finally {
+      setNotifLoading(false)
+    }
+  }
+
   function resetAll() {
     setStage('idle')
     setDragOver(false)
@@ -134,6 +172,14 @@ export default function UploadPrescription() {
     setGeminiLoading(false)
     setGeminiError('')
     setGeminiDone(false)
+    setPrescriptionId('')
+    setNotifChoice('pending')
+    setNotifEmail(localStorage.getItem('medtrack_notif_email') ?? '')
+    setNotifStartDate(new Date().toISOString().split('T')[0])
+    setNotifLoading(false)
+    setNotifSuccess(false)
+    setNotifError('')
+    setScheduledTimes([])
   }
 
   // ── Input class helper ────────────────────────────────────────────────────
@@ -561,14 +607,132 @@ export default function UploadPrescription() {
         </div>
       </div>
 
+      {/* Notification opt-in — only for uploaded prescriptions */}
+      {prescriptionId && (
+        <>
+          {/* Step 1: choice prompt */}
+          {notifChoice === 'pending' && (
+            <div className="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-5">
+              <p className="font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                <i className="fa-solid fa-bell text-blue-600" />
+                Want medication reminders?
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                We'll email you when it's time to take each dose and alert you 3 days before you run out — with an option to book an appointment or call your doctor.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+                  onClick={() => setNotifChoice('opted-in')}
+                >
+                  <i className="fa-solid fa-bell mr-2" />
+                  Notify Me
+                </button>
+                <button
+                  className="flex-1 border border-gray-200 text-gray-500 hover:bg-gray-50 rounded-xl py-2.5 text-sm font-medium transition-colors"
+                  onClick={() => setNotifChoice('opted-out')}
+                >
+                  No Thanks
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2a: opted-in — show email form */}
+          {notifChoice === 'opted-in' && !notifSuccess && (
+            <div className="mt-4 bg-white border border-blue-100 rounded-xl shadow-sm p-5">
+              <p className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <i className="fa-solid fa-bell text-blue-600" />
+                Set Up Reminders
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 font-medium block mb-1">Your email address</label>
+                  <input
+                    type="email"
+                    value={notifEmail}
+                    onChange={(e) => setNotifEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 font-medium block mb-1">Medication start date</label>
+                  <input
+                    type="date"
+                    value={notifStartDate}
+                    onChange={(e) => setNotifStartDate(e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+                {notifError && (
+                  <p className="text-red-500 text-xs flex items-center gap-1.5">
+                    <i className="fa-solid fa-circle-exclamation" />
+                    {notifError}
+                  </p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    className="flex-1 border border-gray-200 text-gray-500 hover:bg-gray-50 rounded-xl py-2.5 text-sm font-medium transition-colors"
+                    onClick={() => setNotifChoice('pending')}
+                  >
+                    Back
+                  </button>
+                  <button
+                    disabled={notifLoading || !notifEmail.includes('@')}
+                    onClick={handleSetupNotifications}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+                  >
+                    {notifLoading
+                      ? <><i className="fa-solid fa-spinner animate-spin mr-2" />Activating...</>
+                      : <><i className="fa-solid fa-bell mr-2" />Activate</>
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2b: success */}
+          {notifSuccess && (
+            <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-5">
+              <p className="text-sm font-semibold text-green-700 mb-2">
+                <i className="fa-solid fa-circle-check text-green-500 mr-2" />
+                Reminders Activated!
+              </p>
+              <p className="text-xs text-green-600 mb-3">
+                Confirmation sent to <strong>{notifEmail}</strong>. Dose reminders scheduled at:
+              </p>
+              <div className="space-y-1 mb-3">
+                {scheduledTimes.map((t) => (
+                  <p key={t} className="text-xs text-green-700 flex items-center gap-1.5">
+                    <i className="fa-solid fa-clock text-green-500" />
+                    {t}
+                  </p>
+                ))}
+              </div>
+              <p className="text-xs text-green-600">
+                You'll also get an alert when supply drops to 3 days remaining.
+              </p>
+            </div>
+          )}
+
+          {/* Step 2c: opted out — quiet acknowledgement */}
+          {notifChoice === 'opted-out' && (
+            <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center gap-3">
+              <i className="fa-solid fa-bell-slash text-gray-400" />
+              <p className="text-sm text-gray-500">
+                No reminders set. You can always set them up later from My Medications.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Next steps card */}
       <div className="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
         <p className="text-sm font-semibold text-blue-700 mb-3">What's next?</p>
         <div className="space-y-2">
-          <p className="text-xs text-blue-600">
-            <i className="fa-solid fa-bell text-blue-500 mr-2" />
-            Refill reminders will be set automatically
-          </p>
           <p className="text-xs text-blue-600">
             <i className="fa-solid fa-bowl-food text-blue-500 mr-2" />
             Diet recommendations are being prepared
