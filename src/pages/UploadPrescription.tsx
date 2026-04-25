@@ -46,7 +46,7 @@ export default function UploadPrescription() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch('http://localhost:5000/api/upload', { method: 'POST', body: formData })
+      const res = await fetch('http://localhost:5001/api/upload', { method: 'POST', body: formData })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error ?? `Server error ${res.status}`)

@@ -1,0 +1,19 @@
+{
+  "patientName": "Michael R. Johnson",
+  "doctorName": "James L. Carter, MD",
+  "dateIssued": "4/18/24",
+  "medications": [
+    {
+      "name": "Amoxicillin",
+      "dosage": "500 mg capsule",
+      "frequency": "three times daily",
+      "durationDays": 7,
+      "notes": "Take 1 capsule by mouth three times daily for 7 days."
+    }
+  ],
+  "_meta": {
+    "filename": "20260425_140421_54befc50.png",
+    "uploadedAt": "2026-04-25T14:04:29.269063",
+    "filepath": "/Users/aakriti.thapa/medtrack/backend/uploads/20260425_140421_54befc50.png"
+  }
+}
