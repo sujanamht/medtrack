@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import Dashboard from '@/pages/Dashboard'
 // import UploadPrescription from '@/pages/UploadPrescription'
-// import Medications from '@/pages/Medications'
+import Medications from '@/pages/Medications'
 import Diet from '@/pages/Diet'
 // import Contact from '@/pages/Contact'
 
@@ -144,9 +144,8 @@ function Layout() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
                <Route path="/diet" element={<Diet />} />
+               <Route path="/medications" element={<Medications />} />
             {/* <Route path="/upload" element={<UploadPrescription />} />
-            <Route path="/medications" element={<Medications />} />
-            <Route path="/diet" element={<Diet />} />
             <Route path="/contact" element={<Contact />} /> */}
           </Routes>
         </main>
