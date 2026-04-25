@@ -156,7 +156,7 @@ export default function Contact() {
           <div>
             <p className="font-semibold text-red-700 text-sm">Medical Emergency?</p>
             <p className="text-xs text-red-500 mt-0.5">
-              Call 911 or go to your nearest emergency room. Do not use this form for emergencies.
+              Call 911 or go to your nearest emergency room. Do not use this for emergencies.
             </p>
           </div>
         </div>
