@@ -1,73 +1,85 @@
-# React + TypeScript + Vite
+# MedTrack
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A medication management app that uses AI to extract prescriptions, track adherence, send reminders, and recommend diet plans.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Prescription Upload** — Upload an image or PDF; Gemini AI extracts patient, doctor, and medication details automatically
+- **Medication Tracking** — View all prescriptions in one place with supply status (Critical / Low / Good) and days remaining
+- **Daily Adherence** — Mark doses as taken or skipped; weekly trend chart and live progress bar on the dashboard
+- **Email Reminders** — Opt-in to automated dose reminders and low-supply alerts sent via email on a schedule
+- **Diet Recommendations** — AI-generated foods to eat/avoid and a daily meal plan based on your medications
+- **Doctor Contact** — All doctors from your prescriptions listed with phone numbers for one-tap calling
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Layer | Stack |
+|---|---|
+| Frontend | React 19, TypeScript, Tailwind CSS, Vite |
+| Backend | Python, Flask, APScheduler |
+| AI | Google Gemini 2.5 Flash |
+| Email | smtplib (Gmail SMTP) |
+| Storage | JSON files (no database) |
 
-## Expanding the ESLint configuration
+## Setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
+- Node.js 18+
+- Python 3.10+
+- A [Gemini API key](https://aistudio.google.com/app/apikey)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Backend
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate      # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Create `backend/.env`:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```
+GEMINI_API_KEY=your_key_here
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Optional — required only for email reminders
+SMTP_USER=your_gmail@gmail.com
+SMTP_PASSWORD=your_app_password
+```
+
+Start the backend:
+
+```bash
+python app.py
+```
+
+Runs on `http://localhost:5001`.
+
+### Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+Runs on `http://localhost:5173`.
+
+## Project Structure
+
+```
+medtrack/
+├── src/
+│   ├── pages/
+│   │   ├── Dashboard.tsx          # Adherence tracking, weekly chart
+│   │   ├── UploadPrescription.tsx # Upload, AI extraction, notification opt-in
+│   │   ├── Medications.tsx        # All prescriptions, supply status
+│   │   ├── Diet.tsx               # AI diet recommendations
+│   │   └── Contact.tsx            # Doctor list with call links
+│   └── App.tsx                    # Routing and layout
+└── backend/
+    ├── app.py                     # Flask API, Gemini integration, scheduler
+    ├── extractions/               # Saved prescription JSON files
+    ├── uploads/                   # Uploaded prescription images/PDFs
+    ├── notifications/             # Email reminder configs
+    └── diets/                     # Cached diet recommendations
 ```
