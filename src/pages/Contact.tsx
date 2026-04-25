@@ -6,11 +6,10 @@ import { useNavigate } from 'react-router-dom'
 const doctors = [
   {
     id: '1',
-    name: 'Dr. Sarah Johnson',
-    specialty: 'General Physician',
-    hospital: 'City Medical Center',
-    phone: '+1 (555) 234-5678',
-    email: 'dr.johnson@citymedical.com',
+    name: 'Dr. Abir Abdo',
+    specialty: 'Internal Medicine',
+    hospital: 'North Oaks Health System',
+    phone: '+1 (985) 230-2778',
     available: true,
     nextSlot: 'Today, 4:00 PM',
     initials: 'SJ',
@@ -18,11 +17,10 @@ const doctors = [
   },
   {
     id: '2',
-    name: 'Dr. Michael Lee',
+    name: 'Dr. Nidal Abi Rafeh',
     specialty: 'Cardiologist',
-    hospital: 'Heart & Vascular Institute',
-    phone: '+1 (555) 345-6789',
-    email: 'dr.lee@hvi.com',
+    hospital: 'North Oaks Health System',
+    phone: '+1 (985) 230-2778',
     available: false,
     nextSlot: 'Monday, 10:00 AM',
     initials: 'ML',
@@ -141,10 +139,7 @@ export default function Contact() {
                 <i className="fa-solid fa-phone w-4 text-gray-400 mr-2" />
                 {doctor.phone}
               </p>
-              <p>
-                <i className="fa-solid fa-envelope w-4 text-gray-400 mr-2" />
-                {doctor.email}
-              </p>
+            
               <p>
                 <i className="fa-solid fa-clock w-4 text-gray-400 mr-2" />
                 Next available: {doctor.nextSlot}
