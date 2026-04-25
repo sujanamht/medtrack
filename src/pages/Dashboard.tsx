@@ -79,7 +79,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
 
-      {/* 1. WELCOME ROW */}
+       {/* 1. WELCOME ROW */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Good morning, John 👋</h2>
@@ -348,6 +348,8 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+    
 
     </div>
   )
