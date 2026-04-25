@@ -1,0 +1,26 @@
+{
+  "patientName": "Maria L. Garcia",
+  "doctorName": "Daniel R. Kim, DO",
+  "dateIssued": "2024-04-19",
+  "medications": [
+    {
+      "name": "Amoxicillin",
+      "dosage": "875 mg tablet",
+      "frequency": "twice daily",
+      "durationDays": 10,
+      "notes": "Take 1 tablet by mouth"
+    },
+    {
+      "name": "Fluconazole",
+      "dosage": "150 mg tablet",
+      "frequency": "single dose",
+      "durationDays": 1,
+      "notes": "Take 1 tablet by mouth"
+    }
+  ],
+  "_meta": {
+    "filename": "20260425_135944_a075ce6e.png",
+    "uploadedAt": "2026-04-25T13:59:50.072639",
+    "filepath": "C:\\Users\\Suuzz\\OneDrive\\Attachments\\github\\CodeTitans\\medtrack\\backend\\uploads\\20260425_135944_a075ce6e.png"
+  }
+}
