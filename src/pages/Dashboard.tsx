@@ -79,7 +79,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
 
-         {/* 1. WELCOME ROW */}
+       {/* 1. WELCOME ROW */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Good morning, John 👋</h2>
@@ -88,6 +88,54 @@ export default function Dashboard() {
         <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold ${adherenceBadgeClass(adherencePct)}`}>
           Today's Adherence: {adherencePct}%
         </span>
+      </div>
+
+      {/* 2. STATS ROW */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+        {/* Card 1 — Today's Doses */}
+        <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
+          <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+            <i className="fa-solid fa-pills text-blue-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{totalCount}</p>
+          <p className="text-xs font-medium text-gray-500">Total doses today</p>
+          <p className="text-xs">
+            <span className="text-green-600 font-medium">{takenCount} taken</span>
+            <span className="text-gray-400"> · {totalCount - takenCount} remaining</span>
+          </p>
+        </div>
+
+        {/* Card 2 — Streak */}
+        <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
+          <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center">
+            <i className="fa-solid fa-fire text-orange-500" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">7</p>
+          <p className="text-xs font-medium text-gray-500">Day streak</p>
+          <p className="text-xs text-green-600 font-medium">Keep it up!</p>
+        </div>
+
+        {/* Card 3 — Medications */}
+        <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
+          <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+            <i className="fa-solid fa-kit-medical text-blue-500" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">4</p>
+          <p className="text-xs font-medium text-gray-500">Active medications</p>
+          <p className="text-xs text-gray-400">Across 2 prescriptions</p>
+        </div>
+
+        {/* Card 4 — Next Dose */}
+        <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col gap-2">
+          <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center">
+            <i className="fa-solid fa-clock text-purple-500" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">8 PM</p>
+          <p className="text-xs font-medium text-gray-500">Next dose</p>
+          <p className="text-xs text-gray-400">Metformin + Atorvastatin</p>
+        </div>
+
       </div>
 
     
