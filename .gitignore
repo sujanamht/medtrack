@@ -25,14 +25,10 @@ dist-ssr
 *.sw?
 
 
-/src
+/src/pages
+/lib
+
 README.md
-echo "# medtrack" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/sujanamht/medtrack.git
-git push -u origin main
+
 .firebaserc
 .firebase.json
