@@ -96,7 +96,8 @@ def extract_prescription_with_gemini(file_path: Path) -> dict:
     # The exact prompt instructing Gemini to return only raw JSON
     prompt = (
         "Parse this prescription and return ONLY valid JSON, no markdown, no explanation: "
-        '{ "patientName": "", "doctorName": "", "dateIssued": "", '
+        '{ "patientName": "", "doctorName": "", "doctorPhone": "", '
+        '"doctorSpecialty": "", "doctorHospital": "", "dateIssued": "", '
         '"medications": [{ "name": "", "dosage": "", "frequency": "", '
         '"durationDays": 0, "notes": "" }] }'
     )
