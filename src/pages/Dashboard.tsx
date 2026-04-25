@@ -305,6 +305,50 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* 4. QUICK ACTIONS ROW */}
+      <div className="grid grid-cols-3 gap-4">
+
+        <div
+          onClick={() => navigate('/upload')}
+          className="bg-white rounded-xl shadow-sm p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <div className="flex justify-center mb-2">
+            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+              <i className="fa-solid fa-upload text-blue-600 text-lg" />
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-gray-800">Upload Prescription</p>
+          <p className="text-xs text-gray-400 mt-0.5">Add new prescription</p>
+        </div>
+
+        <div
+          onClick={() => navigate('/medications')}
+          className="bg-white rounded-xl shadow-sm p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <div className="flex justify-center mb-2">
+            <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center">
+              <i className="fa-solid fa-pills text-purple-600 text-lg" />
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-gray-800">View Medications</p>
+          <p className="text-xs text-gray-400 mt-0.5">Manage your meds</p>
+        </div>
+
+        <div
+          onClick={() => navigate('/diet')}
+          className="bg-white rounded-xl shadow-sm p-4 text-center hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <div className="flex justify-center mb-2">
+            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
+              <i className="fa-solid fa-bowl-food text-green-600 text-lg" />
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-gray-800">Diet Tips</p>
+          <p className="text-xs text-gray-400 mt-0.5">View recommendations</p>
+        </div>
+
+      </div>
+
     
 
     </div>
