@@ -98,6 +98,84 @@ export default function Contact() {
         </p>
       </div>
 
+    {/* 2. DOCTOR CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {doctors.map(doctor => (
+          <div key={doctor.id} className="bg-white rounded-xl shadow-sm p-5">
+
+            {/* Top row */}
+            <div className="flex items-center gap-4">
+              <div
+                className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${avatarClass[doctor.color as DoctorColor]}`}
+              >
+                {doctor.initials}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-800">{doctor.name}</p>
+                <p className="text-sm text-blue-600">{doctor.specialty}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  <i className="fa-solid fa-hospital mr-1" />
+                  {doctor.hospital}
+                </p>
+              </div>
+
+              <div className="ml-auto shrink-0">
+                {doctor.available ? (
+                  <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 rounded-full px-3 py-1 text-xs">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    Available
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 border border-gray-200 rounded-full px-3 py-1 text-xs">
+                    <span className="w-2 h-2 bg-gray-400 rounded-full" />
+                    Unavailable
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Contact details */}
+            <div className="mt-4 space-y-1.5 text-sm text-gray-600">
+              <p>
+                <i className="fa-solid fa-phone w-4 text-gray-400 mr-2" />
+                {doctor.phone}
+              </p>
+              <p>
+                <i className="fa-solid fa-envelope w-4 text-gray-400 mr-2" />
+                {doctor.email}
+              </p>
+              <p>
+                <i className="fa-solid fa-clock w-4 text-gray-400 mr-2" />
+                Next available: {doctor.nextSlot}
+              </p>
+            </div>
+
+            {/* Action buttons */}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => window.alert('Calling ' + doctor.name)}
+                className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm transition-colors"
+              >
+                <i className="fa-solid fa-phone mr-2" />
+                Call Now
+              </button>
+              <button
+                onClick={() => {
+                  updateField('doctorId', doctor.id)
+                  formRef.current?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg px-4 py-2 text-sm transition-colors"
+              >
+                <i className="fa-solid fa-message mr-2" />
+                Message
+              </button>
+            </div>
+
+          </div>
+        ))}
+      </div>
+
     </div>
   )
 }
