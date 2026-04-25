@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import Dashboard from '@/pages/Dashboard'
 import UploadPrescription from '@/pages/UploadPrescription'
@@ -22,29 +22,12 @@ const pageTitles: Record<string, string> = {
   '/contact': 'Contact Doctor',
 }
 
-const hardcodedNotifications = [
-  { id: '1', message: 'Metformin is running critically low — only 6 pills left.' },
-  { id: '2', message: 'Lisinopril refill due in 18 days.' },
-  { id: '3', message: 'Dr. Sarah Johnson confirmed your appointment for next week.' },
-]
 
 function Layout() {
   const location = useLocation()
-  const [notifOpen, setNotifOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const pageTitle = pageTitles[location.pathname] ?? 'MedTrack'
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setNotifOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -102,41 +85,6 @@ function Layout() {
             <h1 className="text-base font-semibold text-gray-800">{pageTitle}</h1>
           </div>
 
-          {/* Notification bell */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-              onClick={() => setNotifOpen((v) => !v)}
-            >
-              <i className="fa-solid fa-bell text-lg" />
-              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                3
-              </span>
-            </button>
-
-            {notifOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <span className="text-sm font-semibold text-gray-800">Notifications</span>
-                </div>
-                <ul className="divide-y divide-gray-100">
-                  {hardcodedNotifications.map((n) => (
-                    <li key={n.id} className="px-4 py-3 text-sm text-gray-700">
-                      {n.message}
-                    </li>
-                  ))}
-                </ul>
-                <div className="px-4 py-2 border-t border-gray-100">
-                  <button
-                    className="w-full text-center text-xs text-blue-600 hover:text-blue-700 font-medium py-1"
-                    onClick={() => setNotifOpen(false)}
-                  >
-                    Mark all read
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </header>
 
         {/* Page content */}
