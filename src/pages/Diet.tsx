@@ -1,73 +1,13 @@
-const detectedConditions = [
-  { name: 'Type 2 Diabetes',  icon: 'fa-solid fa-droplet',        color: 'blue'   },
-  { name: 'Hypertension',     icon: 'fa-solid fa-heart-pulse',     color: 'red'    },
-  { name: 'High Cholesterol', icon: 'fa-solid fa-chart-line',      color: 'orange' },
-]
+import { useEffect, useState } from 'react'
 
-const dietSections = [
-  {
-    id: '1',
-    title: 'Foods to Eat',
-    icon: 'fa-solid fa-circle-check',
-    color: 'green',
-    items: [
-      'Leafy greens — spinach, kale, broccoli',
-      'Whole grains — oats, brown rice, quinoa',
-      'Lean proteins — chicken, fish, legumes',
-      'Healthy fats — avocado, olive oil, nuts',
-      'Low-glycemic fruits — berries, apples, pears',
-      'High-fiber vegetables — carrots, beans, lentils',
-    ],
-  },
-  {
-    id: '2',
-    title: 'Foods to Avoid',
-    icon: 'fa-solid fa-circle-xmark',
-    color: 'red',
-    items: [
-      'Sugary drinks — soda, fruit juices, energy drinks',
-      'Refined carbs — white bread, pastries, white rice',
-      'Saturated fats — red meat, butter, full-fat dairy',
-      'High-sodium foods — processed meats, canned soups',
-      'Alcohol — raises blood sugar and blood pressure',
-      'Fried foods — chips, fast food, deep-fried items',
-    ],
-  },
-  {
-    id: '3',
-    title: 'Lifestyle Tips',
-    icon: 'fa-solid fa-person-walking',
-    color: 'blue',
-    items: [
-      'Walk 30 minutes daily — helps control blood sugar',
-      'Stay hydrated — drink 8 glasses of water per day',
-      'Eat smaller meals — 5-6 small meals vs 3 large',
-      'Monitor blood pressure weekly at home',
-      'Get 7-8 hours of sleep consistently',
-      'Reduce stress — try meditation or deep breathing',
-    ],
-  },
-  {
-    id: '4',
-    title: 'Medication Interactions',
-    icon: 'fa-solid fa-triangle-exclamation',
-    color: 'orange',
-    items: [
-      'Metformin: take with food to reduce stomach upset',
-      'Lisinopril: avoid potassium supplements or salt substitutes',
-      'Atorvastatin: avoid grapefruit and grapefruit juice',
-      'Aspirin: avoid on empty stomach — take with food or milk',
-    ],
-  },
-]
-
-const mealPlan = [
-  { meal: 'Breakfast',    time: '7:00 AM',  suggestion: 'Oatmeal with berries + green tea' },
-  { meal: 'Mid-morning',  time: '10:00 AM', suggestion: 'Apple slices with almond butter' },
-  { meal: 'Lunch',        time: '1:00 PM',  suggestion: 'Grilled chicken salad with olive oil dressing' },
-  { meal: 'Afternoon',    time: '4:00 PM',  suggestion: 'Handful of mixed nuts + water' },
-  { meal: 'Dinner',       time: '7:00 PM',  suggestion: 'Baked salmon with steamed broccoli + quinoa' },
-]
+type Condition = { name: string; icon: string; color: string }
+type Meal = { m: string; t: string; s: string }
+type DietData = {
+  conditions: Condition[]
+  eat: string[]
+  avoid: string[]
+  meals: Meal[]
+}
 
 // ─── Color Maps ───────────────────────────────────────────────────────────────
 
@@ -103,8 +43,57 @@ const sectionDot: Record<Color, string> = {
 
 
 export default function Diet() {
+  const [data, setData] = useState<DietData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [regenerating, setRegenerating] = useState(false)
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/diet-recommendations')
+      .then(r => r.json())
+      .then((json: DietData) => { setData(json); setLoading(false) })
+      .catch(() => { setError('Failed to load recommendations'); setLoading(false) })
+  }, [])
+
+  function regenerateMeals() {
+    setRegenerating(true)
+    fetch('http://localhost:5001/api/meal-plan/regenerate', { method: 'POST' })
+      .then(r => r.json())
+      .then((json: { meals: Meal[] }) => {
+        setData(prev => prev ? { ...prev, meals: json.meals } : prev)
+      })
+      .finally(() => setRegenerating(false))
+  }
+
+  const detectedConditions = data?.conditions ?? []
+  const dietSections = [
+    {
+      id: '1',
+      title: 'Foods to Eat',
+      icon: 'fa-solid fa-circle-check',
+      color: 'green' as Color,
+      items: data?.eat ?? [],
+    },
+    {
+      id: '2',
+      title: 'Foods to Avoid',
+      icon: 'fa-solid fa-circle-xmark',
+      color: 'red' as Color,
+      items: data?.avoid ?? [],
+    },
+  ]
+  const mealPlan = data?.meals ?? []
+
   return (
     <div className="space-y-6">
+      {/* LOADING / ERROR */}
+      {loading && (
+        <div className="text-center text-gray-500 py-10">Loading recommendations…</div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>
+      )}
+
       {/* DISCLAIMER */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
         <i className="fa-solid fa-circle-info text-amber-600 mt-0.5 shrink-0" />
@@ -172,19 +161,29 @@ export default function Diet() {
 
       {/* 4. SAMPLE MEAL PLAN */}
       <div className="bg-white rounded-xl shadow-sm p-5">
-        <div className="flex items-center gap-2 mb-1">
-          <i className="fa-solid fa-utensils text-gray-700" />
-          <h3 className="font-semibold text-gray-800">Sample Meal Plan</h3>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <i className="fa-solid fa-utensils text-gray-700" />
+            <h3 className="font-semibold text-gray-800">Sample Meal Plan</h3>
+          </div>
+          <button
+            onClick={regenerateMeals}
+            disabled={regenerating}
+            className="inline-flex items-center gap-1.5 border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i className={`fa-solid fa-arrows-rotate ${regenerating ? 'animate-spin' : ''}`} />
+            Regenerate
+          </button>
         </div>
 
-        <div className="divide-y divide-gray-100">
+        <div className={`divide-y divide-gray-100 transition-opacity ${regenerating ? 'opacity-50' : ''}`}>
           {mealPlan.map(entry => (
-            <div key={entry.meal} className="flex items-center py-3">
-              <span className="font-medium text-gray-800 w-28 shrink-0">{entry.meal}</span>
+            <div key={entry.m} className="flex items-center py-3">
+              <span className="font-medium text-gray-800 w-28 shrink-0">{entry.m}</span>
               <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full shrink-0">
-                {entry.time}
+                {entry.t}
               </span>
-              <span className="text-sm text-gray-600 flex-1 ml-4">{entry.suggestion}</span>
+              <span className="text-sm text-gray-600 flex-1 ml-4">{entry.s}</span>
             </div>
           ))}
         </div>

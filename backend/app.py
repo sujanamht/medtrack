@@ -46,13 +46,16 @@ CORS(
     },
 )
 
+# Folders for uploads, extracted JSONs, and diet data
 BASE_DIR = Path(__file__).parent
 UPLOAD_FOLDER = BASE_DIR / "uploads"
 EXTRACTION_FOLDER = BASE_DIR / "extractions"
+DIETS_FOLDER = BASE_DIR / "diets"
 NOTIFICATIONS_FOLDER = BASE_DIR / "notifications"
 
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 EXTRACTION_FOLDER.mkdir(exist_ok=True)
+DIETS_FOLDER.mkdir(exist_ok=True)
 NOTIFICATIONS_FOLDER.mkdir(exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "pdf"}
@@ -429,6 +432,131 @@ def list_prescriptions():
     return jsonify(prescriptions), 200
 
 
+DIET_CACHE_FILE = DIETS_FOLDER / "diet_cache.json"
+
+
+def collect_meds() -> list[str]:
+    """Return list of 'name dosage' strings from all saved prescription extractions."""
+    meds = []
+    for json_file in sorted(EXTRACTION_FOLDER.glob("*.json"), reverse=True):
+        try:
+            with open(json_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for med in data.get("medications", []):
+                name = med.get("name", "").strip()
+                dosage = med.get("dosage", "").strip()
+                if name:
+                    meds.append(f"{name} {dosage}".strip())
+        except (json.JSONDecodeError, OSError):
+            continue
+    return meds
+
+
+def call_gemini(prompt: str) -> dict:
+    """Call Gemini, strip markdown fences if present, and return parsed JSON dict."""
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[prompt],
+    )
+    raw_text = response.text.strip()
+    if raw_text.startswith("```"):
+        lines = raw_text.splitlines()
+        raw_text = "\n".join(lines[1:-1]) if lines[-1].startswith("```") else "\n".join(lines[1:])
+    return json.loads(raw_text)
+
+
+@app.route("/api/diet-recommendations", methods=["GET"])
+def diet_recommendations():
+    """
+    GET /api/diet-recommendations
+    Reads saved prescriptions, sends only med name+dosage to Gemini,
+    and returns minified diet recommendations with short keys.
+    Result is cached in diets/diet_cache.json.
+    """
+    # Return cached result if it exists
+    if DIET_CACHE_FILE.exists():
+        try:
+            with open(DIET_CACHE_FILE, "r", encoding="utf-8") as f:
+                return jsonify(json.load(f)), 200
+        except (json.JSONDecodeError, OSError):
+            pass  # Cache corrupted — fall through to regenerate
+
+    meds = collect_meds()
+    if not meds:
+        return jsonify({"error": "No prescriptions found"}), 404
+
+    prompt = (
+        f'Patient takes: {", ".join(meds)}. '
+        'Return ONLY minified JSON (no spaces, no markdown): '
+        '{"conditions":[{"name":"","icon":"fa-solid fa-x","color":""}],'
+        '"eat":["",""],'
+        '"avoid":["",""],'
+        '"meals":[{"m":"","t":"","s":""}]} '
+        'Rules: max 6 items in eat, max 6 in avoid, exactly 5 meals '
+        '(Breakfast, Mid-morning, Lunch, Afternoon, Dinner). '
+        'For meals use specific real food names (e.g. "Grilled salmon with brown rice and steamed broccoli" '
+        'not "healthy protein with grains"). Be concrete, no generic terms like "lean protein" or "whole grains".'
+    )
+
+    try:
+        result = call_gemini(prompt)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Gemini returned non-JSON"}), 502
+    except Exception as exc:
+        return jsonify({"error": f"Gemini API error: {str(exc)}"}), 502
+
+    with open(DIET_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False)
+
+    return jsonify(result), 200
+
+
+@app.route("/api/meal-plan/regenerate", methods=["POST"])
+def regenerate_meal_plan():
+    """
+    POST /api/meal-plan/regenerate
+    Generates a fresh meal plan from Gemini, updates only the meals key
+    in diets/diet_cache.json, and returns {"meals": [...]}.
+    """
+    meds = collect_meds()
+    if not meds:
+        return jsonify({"error": "No prescriptions found"}), 404
+
+    prompt = (
+        f'Patient takes: {", ".join(meds)}. '
+        'Suggest a daily meal plan safe for their medications. '
+        'Use specific real food names (e.g. "Grilled salmon with brown rice and steamed broccoli" '
+        'not "healthy protein with grains"). '
+        'Be concrete, no generic terms like "lean protein" or "whole grains". '
+        'Return ONLY minified JSON, no markdown: '
+        '{"meals":[{"m":"","t":"","s":""}]} '
+        'Exactly 5 meals (Breakfast, Mid-morning, Lunch, Afternoon, Dinner).'
+    )
+
+    try:
+        result = call_gemini(prompt)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Gemini returned non-JSON"}), 502
+    except Exception as exc:
+        return jsonify({"error": f"Gemini API error: {str(exc)}"}), 502
+
+    new_meals = result.get("meals", [])
+
+    # Load existing cache and update only the meals key
+    cache = {}
+    if DIET_CACHE_FILE.exists():
+        try:
+            with open(DIET_CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    cache["meals"] = new_meals
+
+    with open(DIET_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False)
+
+    return jsonify({"meals": new_meals}), 200
 @app.route("/api/notifications/setup", methods=["POST"])
 def setup_notifications():
     """
