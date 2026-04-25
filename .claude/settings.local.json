@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venvScriptsactivate)",
+      "Bash(pip show:*)",
+      "Bash(./venv/Scripts/pip show:*)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/python -c \"from google import genai; print\\(''import OK''\\)\")",
+      "Bash(./venv/Scripts/python app.py)",
+      "Bash(curl -s http://localhost:5000/api/prescriptions)"
+    ]
+  }
+}
