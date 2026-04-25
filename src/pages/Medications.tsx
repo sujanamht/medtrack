@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 type Status = 'critical' | 'low' | 'good'
 
@@ -12,69 +13,72 @@ interface Medication {
   durationDays: number
   startDate: string
   prescribedBy: string
-  condition: string
+  notes: string
   status: Status
   daysLeft: number
 }
 
-const initialMedications: Medication[] = [
-  {
-    id: '1',
-    name: 'Metformin',
-    dosage: '500mg',
-    frequency: 'Twice daily',
-    pillsRemaining: 6,
-    totalPills: 60,
-    durationDays: 30,
-    startDate: '2025-04-01',
-    prescribedBy: 'Dr. Sarah Johnson',
-    condition: 'Type 2 Diabetes',
-    status: 'critical',
-    daysLeft: 3,
-  },
-  {
-    id: '2',
-    name: 'Lisinopril',
-    dosage: '10mg',
-    frequency: 'Once daily',
-    pillsRemaining: 18,
-    totalPills: 30,
-    durationDays: 30,
-    startDate: '2025-04-01',
-    prescribedBy: 'Dr. Sarah Johnson',
-    condition: 'Hypertension',
-    status: 'low',
-    daysLeft: 18,
-  },
-  {
-    id: '3',
-    name: 'Atorvastatin',
-    dosage: '20mg',
-    frequency: 'Once daily at night',
-    pillsRemaining: 28,
-    totalPills: 30,
-    durationDays: 30,
-    startDate: '2025-04-10',
-    prescribedBy: 'Dr. Michael Lee',
-    condition: 'High Cholesterol',
-    status: 'good',
-    daysLeft: 28,
-  },
-  {
-    id: '4',
-    name: 'Aspirin',
-    dosage: '75mg',
-    frequency: 'Once daily',
-    pillsRemaining: 25,
-    totalPills: 30,
-    durationDays: 30,
-    startDate: '2025-04-10',
-    prescribedBy: 'Dr. Michael Lee',
-    condition: 'Blood Thinning',
-    status: 'good',
-    daysLeft: 25,
-  },
-]
+interface PrescriptionMed {
+  name: string
+  dosage: string
+  frequency: string
+  durationDays: number
+  notes: string
+}
+
+interface Prescription {
+  patientName: string
+  doctorName: string
+  dateIssued: string
+  medications: PrescriptionMed[]
+  _meta: {
+    filename: string
+    uploadedAt: string
+  }
+}
+
+function computeStatus(daysLeft: number, total: number): Status {
+  const pct = total > 0 ? daysLeft / total : 0
+  if (daysLeft <= 3) return 'critical'
+  if (pct <= 0.3) return 'low'
+  return 'good'
+}
+
+function prescriptionsToMeds(prescriptions: Prescription[]): Medication[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const meds: Medication[] = []
+
+  prescriptions.forEach((rx) => {
+    const startDate = rx._meta.uploadedAt.split('T')[0]
+    const start = new Date(startDate)
+    start.setHours(0, 0, 0, 0)
+
+    rx.medications.forEach((m, i) => {
+      const total = m.durationDays || 30
+      const elapsed = Math.floor((today.getTime() - start.getTime()) / 86400000)
+      const daysLeft = Math.max(0, total - elapsed)
+      const pillsRemaining = daysLeft
+
+      meds.push({
+        id: `${rx._meta.filename}-${i}`,
+        name: m.name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        durationDays: total,
+        startDate,
+        prescribedBy: rx.doctorName || 'Unknown',
+        notes: m.notes,
+        totalPills: total,
+        pillsRemaining,
+        daysLeft,
+        status: computeStatus(daysLeft, total),
+      })
+    })
+  })
+
+  return meds
+}
 
 const statusColors: Record<Status, { border: string; avatar: string; text: string; bar: string; badge: string; outline: string }> = {
   critical: {
@@ -111,8 +115,26 @@ function formatDate(dateStr: string) {
 }
 
 export default function Medications() {
-  const [meds, setMeds] = useState<Medication[]>(initialMedications)
+  const navigate = useNavigate()
+  const [meds, setMeds] = useState<Medication[]>([])
   const [filter, setFilter] = useState<Filter>('all')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('http://localhost:5001/api/prescriptions')
+      .then((r) => {
+        if (!r.ok) throw new Error(`Server error ${r.status}`)
+        return r.json()
+      })
+      .then((data: Prescription[]) => {
+        setMeds(prescriptionsToMeds(data))
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load medications')
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   const filtered = filter === 'all' ? meds : meds.filter((m) => m.status === filter)
 
@@ -135,13 +157,13 @@ export default function Medications() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Medications</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{meds.length} active medications</p>
+          <p className="text-sm text-gray-500 mt-0.5">{meds.length} active medication{meds.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex gap-2">
-          <button className="border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
-            + Add Medication
-          </button>
-          <button className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+          <button
+            className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            onClick={() => navigate('/upload')}
+          >
             Upload Prescription
           </button>
         </div>
@@ -204,12 +226,30 @@ export default function Medications() {
         ))}
       </div>
 
-      {/* Medications grid */}
-      {filtered.length === 0 ? (
+      {/* Content */}
+      {loading ? (
+        <div className="py-16 flex flex-col items-center justify-center text-center">
+          <i className="fa-solid fa-spinner animate-spin text-4xl text-blue-400" />
+          <p className="text-gray-500 mt-4 font-medium">Loading medications...</p>
+        </div>
+      ) : error ? (
+        <div className="py-16 flex flex-col items-center justify-center text-center">
+          <i className="fa-solid fa-circle-exclamation text-4xl text-red-400" />
+          <p className="text-gray-500 mt-4 font-medium">Could not load medications</p>
+          <p className="text-gray-400 text-sm mt-1">{error}</p>
+          <p className="text-gray-400 text-xs mt-2">Make sure the backend is running on port 5001</p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="py-16 flex flex-col items-center justify-center text-center">
           <i className="fa-solid fa-pills text-6xl text-gray-300" />
-          <p className="text-gray-500 mt-4 font-medium">No medications found</p>
-          <p className="text-gray-400 text-sm">Try a different filter</p>
+          <p className="text-gray-500 mt-4 font-medium">
+            {meds.length === 0 ? 'No medications yet' : 'No medications found'}
+          </p>
+          <p className="text-gray-400 text-sm mt-1">
+            {meds.length === 0
+              ? 'Upload a prescription to get started'
+              : 'Try a different filter'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -234,17 +274,14 @@ export default function Medications() {
                       </span>
                     </div>
                   </div>
-                  <span className={`text-xs border rounded-full px-2 py-0.5 ${c.badge}`}>
-                    {med.condition}
-                  </span>
                 </div>
 
                 {/* Supply section */}
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-500">Supply Remaining</span>
+                    <span className="text-sm text-gray-500">Days Remaining</span>
                     <span className={`text-sm font-medium ${c.text}`}>
-                      {med.pillsRemaining} pills · {med.daysLeft} days left
+                      {med.daysLeft} / {med.totalPills} days
                     </span>
                   </div>
                   <div className="bg-gray-100 rounded-full h-2 w-full">
@@ -267,15 +304,21 @@ export default function Medications() {
                     <i className="fa-solid fa-clock" />
                     {med.frequency}
                   </span>
-                  <span className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 flex items-center gap-1.5">
-                    <i className="fa-solid fa-user-doctor" />
-                    {med.prescribedBy}
-                  </span>
+                  {med.prescribedBy && med.prescribedBy !== 'Unknown' && (
+                    <span className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 flex items-center gap-1.5">
+                      <i className="fa-solid fa-user-doctor" />
+                      {med.prescribedBy}
+                    </span>
+                  )}
                   <span className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 flex items-center gap-1.5">
                     <i className="fa-solid fa-calendar" />
                     {formatDate(med.startDate)}
                   </span>
                 </div>
+
+                {med.notes && (
+                  <p className="mt-3 text-xs text-gray-400 italic">{med.notes}</p>
+                )}
 
                 {/* Footer */}
                 <div className="mt-4 flex justify-between items-center border-t border-gray-100 pt-3">
@@ -287,12 +330,6 @@ export default function Medications() {
                     Request Refill
                   </button>
                   <div className="flex gap-2">
-                    <button
-                      className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
-                      onClick={() => window.alert('Edit coming soon')}
-                    >
-                      <i className="fa-solid fa-pen-to-square" />
-                    </button>
                     <button
                       className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                       onClick={() => removeMed(med.id)}

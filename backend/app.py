@@ -25,7 +25,19 @@ load_dotenv()
 app = Flask(__name__)
 
 # Allow requests from the Vite dev server running on localhost:5173
-CORS(app, origins=["http://localhost:5173"])
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ],
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type"],
+        }
+    },
+)
 
 # Folders for uploads and extracted JSON files
 BASE_DIR = Path(__file__).parent
@@ -191,5 +203,5 @@ def list_prescriptions():
 
 if __name__ == "__main__":
     # debug=True enables auto-reload on code changes (handy during development)
-    print("Starting MedTrack backend on http://localhost:5000")
-    app.run(debug=True, port=5000)
+    print("Starting MedTrack backend on http://localhost:5001")
+    app.run(debug=True, port=5001)
