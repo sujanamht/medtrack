@@ -327,6 +327,26 @@ export default function Contact() {
         )}
       </div>
 
+    {/* 4. EMERGENCY BANNER */}
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <i className="fa-solid fa-triangle-exclamation text-red-500 text-2xl shrink-0" />
+          <div>
+            <p className="font-semibold text-red-700 text-sm">Medical Emergency?</p>
+            <p className="text-xs text-red-500 mt-0.5">
+              Call 911 or go to your nearest emergency room. Do not use this form for emergencies.
+            </p>
+          </div>
+        </div>
+        <a
+          href="tel:911"
+          className="shrink-0 bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 text-sm transition-colors"
+        >
+          <i className="fa-solid fa-phone mr-1" />
+          Call 911
+        </a>
+      </div>
+
 
     </div>
   )
