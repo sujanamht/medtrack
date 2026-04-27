@@ -1,0 +1,22 @@
+{
+  "patientName": "Olivia R. Bennett",
+  "doctorName": "Emily S. Carter",
+  "dateIssued": "04/19/2024",
+  "clinicName": "WellLife Medical Center",
+  "clinicPhone": "(602) 555-8844",
+  "clinicWebsite": "",
+  "medications": [
+    {
+      "name": "Norethindrone",
+      "dosage": "0.35 mg tablet",
+      "frequency": "once daily",
+      "durationDays": 28,
+      "notes": "Take 1 tablet by mouth once daily at the same time."
+    }
+  ],
+  "_meta": {
+    "filename": "20260425_171039_fc2df1d6.png",
+    "uploadedAt": "2026-04-25T17:10:43.864652",
+    "filepath": "C:\\Users\\Suuzz\\OneDrive\\Attachments\\github\\CodeTitans\\medtrack\\backend\\uploads\\20260425_171039_fc2df1d6.png"
+  }
+}

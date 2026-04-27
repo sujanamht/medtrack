@@ -1,0 +1,52 @@
+{
+  "prescriptionId": "20260425_200302_f7bcd0a3",
+  "userEmail": "suzanamht@gmail.com",
+  "startDate": "2026-04-26",
+  "active": true,
+  "createdAt": "2026-04-25T20:04:14.559323",
+  "patientName": "Ethan P. Miller",
+  "doctorName": "Brian K. Johnson",
+  "clinicName": "MedPoint Family Care",
+  "clinicPhone": "(317) 555-2100",
+  "clinicWebsite": "",
+  "medications": [
+    {
+      "name": "Omeprazole",
+      "dosage": "20 mg capsule",
+      "frequency": "Take 1 capsule by mouth once daily before breakfast.",
+      "durationDays": 30,
+      "notes": "",
+      "timesPerDay": 1,
+      "scheduledTimes": [
+        "08:00"
+      ]
+    },
+    {
+      "name": "Sucralfate",
+      "dosage": "1 g tablet",
+      "frequency": "Take 1 tablet by mouth four times daily.",
+      "durationDays": 30,
+      "notes": "",
+      "timesPerDay": 4,
+      "scheduledTimes": [
+        "07:00",
+        "12:00",
+        "17:00",
+        "21:00"
+      ]
+    },
+    {
+      "name": "Vitamin D3",
+      "dosage": "2000 IU tablet",
+      "frequency": "Take 1 tablet by mouth daily.",
+      "durationDays": 30,
+      "notes": "",
+      "timesPerDay": 1,
+      "scheduledTimes": [
+        "08:00"
+      ]
+    }
+  ],
+  "sentReminders": {},
+  "sentAlerts": {}
+}

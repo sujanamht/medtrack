@@ -1,0 +1,22 @@
+{
+  "patientName": "People of Reddit",
+  "doctorName": "Sparky 2006",
+  "dateIssued": "08/16/19",
+  "clinicName": "",
+  "clinicPhone": "",
+  "clinicWebsite": "",
+  "medications": [
+    {
+      "name": "Do not study",
+      "dosage": "",
+      "frequency": "Today",
+      "durationDays": 1,
+      "notes": "so you can be rested for tomorrow"
+    }
+  ],
+  "_meta": {
+    "filename": "20260425_201541_23462d31.jpg",
+    "uploadedAt": "2026-04-25T20:15:47.970165",
+    "filepath": "C:\\Users\\Suuzz\\OneDrive\\Attachments\\github\\CodeTitans\\medtrack\\backend\\uploads\\20260425_201541_23462d31.jpg"
+  }
+}
